@@ -1,0 +1,147 @@
+// ULTRASONIC OBSTACLE AVOIDING CAR BASED ON ARDUINO
+// Libraries required:
+// 1. Adafruit Motor Shield library (NOT V2)
+// 2. NewPing Library
+
+#include <AFMotor.h>
+#include <NewPing.h>
+#include <Servo.h>
+
+// Ultrasonic pins (use digital pins instead of A0/A1)
+#define TRIG_PIN 12
+#define ECHO_PIN 13
+#define MAX_DISTANCE 200
+
+// Motor objects for Adafruit Motor Shield
+AF_DCMotor motor1(1);
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+// Servo object (attach to pin 10 to avoid conflict with motor shield)
+Servo myservo;
+
+// Ultrasonic sensor object
+NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
+
+// Variables
+int distance = 100;
+
+void setup() {
+  Serial.begin(9600);
+
+  // Set motor speeds
+  motor1.setSpeed(200);
+  motor2.setSpeed(200);
+  motor3.setSpeed(200);
+  motor4.setSpeed(200);
+
+  // Initialize servo at center position
+  myservo.attach(10);
+  myservo.write(100);  // center
+  delay(2000);
+
+  // Initial distance check
+  distance = checkDistance();
+}
+
+void loop() {
+  int distanceRight = 0;
+  int distanceLeft = 0;
+  delay(40);
+
+  if (distance <= 25) {   // Obstacle detected
+    stopMovement();
+    delay(100);
+
+    moveBackward();
+    delay(300);
+    stopMovement();
+    delay(200);
+
+    // Check distances left and right
+    distanceRight = checkRightDistance();
+    distanceLeft  = checkLeftDistance();
+
+    if (distanceRight > distanceLeft) {
+      turnRight();
+    } else {
+      turnLeft();
+    }
+  } else {
+    moveForward();
+  }
+
+  distance = checkDistance();
+  Serial.print("Distance: ");
+  Serial.println(distance);
+}
+
+// ===== Functions =====
+
+int checkRightDistance() {
+  myservo.write(60);   // look right
+  delay(500);
+  int dist = checkDistance();
+  myservo.write(100);  // back to center
+  delay(300);
+  return dist;
+}
+
+int checkLeftDistance() {
+  myservo.write(140);  // look left
+  delay(500);
+  int dist = checkDistance();
+  myservo.write(100);  // back to center
+  delay(300);
+  return dist;
+}
+
+int checkDistance() {
+  delay(70);
+  int cm = sonar.ping_cm();
+  if (cm == 0) {
+    cm = 250;  // if no object detected
+  }
+  return cm;
+}
+
+void stopMovement() {
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  motor3.run(RELEASE);
+  motor4.run(RELEASE);
+}
+
+void moveForward() {
+  motor1.run(FORWARD);
+  motor2.run(FORWARD);
+  motor3.run(FORWARD);
+  motor4.run(FORWARD);
+}
+
+void moveBackward() {
+  motor1.run(BACKWARD);
+  motor2.run(BACKWARD);
+  motor3.run(BACKWARD);
+  motor4.run(BACKWARD);
+}
+
+void turnLeft() {
+  motor1.run(FORWARD);
+  motor2.run(FORWARD);
+  motor3.run(BACKWARD);
+  motor4.run(BACKWARD);
+  delay(800);  // longer turn
+  stopMovement();
+}
+
+void turnRight() {
+  motor1.run(BACKWARD);
+  motor2.run(BACKWARD);
+  motor3.run(FORWARD);
+  motor4.run(FORWARD);
+  delay(800);  // longer turn
+  stopMovement();
+}
+
